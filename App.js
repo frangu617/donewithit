@@ -3,13 +3,13 @@ import {
   View,
   Text,
   TextInput,
-  Button,
+  Pressable,
   ScrollView,
   ActivityIndicator,
   StyleSheet,
-  TouchableOpacity,
   Alert,
   Modal,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
@@ -200,14 +200,20 @@ const App = () => {
           logs.length === 0 || logs[logs.length - 1]?.type === "Clock Out"
         }
       />
-      <Button
-      style={styles.button}
-        title={`Clock ${logs.length % 2 === 0 ? "In" : "Out"}`}
+      <Pressable
+        style={({ pressed }) => [styles.button, pressed && { opacity: 0.5 }]}
         onPress={handleClockInOut}
-      />
-      <Button 
-      style={styles.button}
-      title="Add Custom Hours" onPress={() => setShowModal(true)} />
+      >
+        <Text style={styles.buttonText}>
+          Clock {logs.length % 2 === 0 ? "In" : "Out"}
+        </Text>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.button, pressed && { opacity: 0.5 }]}
+        onPress={() => setShowModal(true)}
+      >
+        <Text style={styles.buttonText}>Add Custom Hours</Text>
+      </Pressable>
       {loading ? (
         <View style={styles.loadingContainer}>
           {showLoadingSpinner && (
@@ -224,11 +230,15 @@ const App = () => {
             <Text style={styles.weekRange}>
               {weekRange} (Total Hours: {calculateTotalHours(weekLogs)})
             </Text>
-            <Button
-              title="Delete Week"
+            <Pressable
+              style={({ pressed }) => [
+                styles.deleteButton,
+                pressed && { opacity: 0.5 },
+              ]}
               onPress={() => handleDeleteWeek(weekRange)}
-              color="red"
-            />
+            >
+              <Text style={styles.buttonText}>Delete Week</Text>
+            </Pressable>
             {weekLogs.map((log, index) => {
               const dateTimeFormat = new Intl.DateTimeFormat("en-US", {
                 weekday: "long",
@@ -249,11 +259,15 @@ const App = () => {
                     <Text style={styles.logText}>{log.type}</Text>
                     <Text style={styles.logText}>{formattedTime}</Text>
                   </View>
-                  <TouchableOpacity
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.deleteButton,
+                      pressed && { opacity: 0.5 },
+                    ]}
                     onPress={() => handleDelete(logs.indexOf(log))}
                   >
-                    <Text style={styles.deleteButton}>Delete</Text>
-                  </TouchableOpacity>
+                    <Text style={styles.buttonText}>Delete</Text>
+                  </Pressable>
                 </View>
               );
             })}
@@ -271,39 +285,54 @@ const App = () => {
               onChangeText={(text) => setLocation(text)}
             />
             <Text>Clock In Time:</Text>
-            <TouchableOpacity onPress={showClockInPicker}>
+            <Pressable onPress={showClockInPicker}>
               <Text style={styles.dateText}>
                 {customClockIn.toLocaleString()}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
             <Text>Clock Out Time:</Text>
-            <TouchableOpacity onPress={showClockOutPicker}>
+            <Pressable onPress={showClockOutPicker}>
               <Text style={styles.dateText}>
                 {customClockOut.toLocaleString()}
               </Text>
-            </TouchableOpacity>
-            <Button style={styles.button} title="Add Log" onPress={handleAddCustomLog} />
-
-            <Button
-              title="Cancel"
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                pressed && { opacity: 0.5 },
+              ]}
+              onPress={handleAddCustomLog}
+            >
+              <Text style={styles.buttonText}>Add Log</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                pressed && { opacity: 0.5 },
+              ]}
               onPress={() => setShowModal(false)}
-              color="red"
-            />
+            >
+              <Text style={[styles.buttonText, { color: "red" }]}>Cancel</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
-      <DateTimePickerModal
-        isVisible={isClockInPickerVisible}
-        mode="datetime"
-        onConfirm={handleClockInConfirm}
-        onCancel={hideClockInPicker}
-      />
-      <DateTimePickerModal
-        isVisible={isClockOutPickerVisible}
-        mode="datetime"
-        onConfirm={handleClockOutConfirm}
-        onCancel={hideClockOutPicker}
-      />
+      {Platform.OS !== "web" && (
+        <>
+          <DateTimePickerModal
+            isVisible={isClockInPickerVisible}
+            mode="datetime"
+            onConfirm={handleClockInConfirm}
+            onCancel={hideClockInPicker}
+          />
+          <DateTimePickerModal
+            isVisible={isClockOutPickerVisible}
+            mode="datetime"
+            onConfirm={handleClockOutConfirm}
+            onCancel={hideClockOutPicker}
+          />
+        </>
+      )}
     </ScrollView>
   );
 };
@@ -325,12 +354,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     elevation: 2,
     bordershadowColor: "#000",
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1,
-
   },
   input: {
     height: 40,
@@ -356,7 +379,6 @@ const styles = StyleSheet.create({
   weekRange: {
     fontSize: 18,
     fontWeight: "bold",
-    // marginBottom: 10,
     textAlign: "center",
     backgroundColor: "#fff",
     padding: 10,
@@ -367,7 +389,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // marginBottom: 10,
     padding: 10,
     backgroundColor: "#fff",
     borderRadius: 5,
@@ -381,12 +402,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   deleteButton: {
-    color: "white",
-    fontWeight: "bold",
     backgroundColor: "red",
     borderRadius: 5,
     padding: 10,
     elevation: 2,
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
   },
   modalContainer: {
     flex: 1,
