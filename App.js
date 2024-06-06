@@ -190,6 +190,7 @@ const App = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+    
       <Text style={styles.title}>Work Hours Tracker</Text>
       <TextInput
         style={styles.input}
@@ -342,6 +343,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
     backgroundColor: "#f5f5f5",
+    
   },
   title: {
     fontSize: 24,
