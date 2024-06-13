@@ -84,7 +84,121 @@ const App = () => {
     }
   };
 
-  // Other functions remain the same...
+   const handleDelete = async (index) => {
+     try {
+       const updatedLogs = logs.filter((_, i) => i !== index);
+       await AsyncStorage.setItem("workLogs", JSON.stringify(updatedLogs));
+       setLogs(updatedLogs);
+     } catch (error) {
+       console.error("Error deleting log:", error);
+     }
+   };
+
+   const handleDeleteWeek = async (weekRange) => {
+     try {
+       const updatedLogs = logs.filter((log) => {
+         const logDate = new Date(log.time);
+         const weekStart = new Date(weekRange.split("-")[0]);
+         const weekEnd = new Date(weekRange.split("-")[1]);
+         return !(logDate >= weekStart && logDate <= weekEnd);
+       });
+       await AsyncStorage.setItem("workLogs", JSON.stringify(updatedLogs));
+       setLogs(updatedLogs);
+     } catch (error) {
+       console.error("Error deleting week logs:", error);
+     }
+   };
+
+   const handleAddCustomLog = async () => {
+     try {
+       if (!location.trim()) {
+         Alert.alert("Error", "Please enter a location.");
+         return;
+       }
+       if (customClockOut <= customClockIn) {
+         Alert.alert("Error", "Clock-out time must be after clock-in time.");
+         return;
+       }
+
+       const newLog = [
+         { location, type: "Clock In", time: customClockIn },
+         { location, type: "Clock Out", time: customClockOut },
+       ];
+
+       const updatedLogs = [...logs, ...newLog];
+       await AsyncStorage.setItem("workLogs", JSON.stringify(updatedLogs));
+       setLogs(updatedLogs);
+       setShowModal(false);
+       setLocation("");
+     } catch (error) {
+       console.error("Error adding custom log:", error);
+     }
+   };
+
+   const groupLogsByWeek = () => {
+     const groupedLogs = {};
+     logs.forEach((log) => {
+       if (log && log.time) {
+         const logDate = new Date(log.time);
+         const weekStart = new Date(logDate);
+         weekStart.setDate(
+           logDate.getDate() -
+             logDate.getDay() +
+             (logDate.getDay() === 0 ? -6 : 1)
+         );
+         weekStart.setHours(0, 0, 0, 0);
+
+         const weekEnd = new Date(weekStart);
+         weekEnd.setDate(weekStart.getDate() + 6);
+         const weekRange =
+           weekStart.toDateString() + "-" + weekEnd.toDateString();
+
+         if (!groupedLogs[weekRange]) {
+           groupedLogs[weekRange] = [];
+         }
+         groupedLogs[weekRange].push(log);
+       }
+     });
+     return groupedLogs;
+   };
+
+   const calculateTotalHours = (logs) => {
+     let totalHours = 0;
+     for (let i = 0; i < logs.length; i += 2) {
+       if (logs[i] && logs[i + 1]) {
+         const clockInTime = new Date(logs[i].time);
+         const clockOutTime = new Date(logs[i + 1].time);
+         totalHours += (clockOutTime - clockInTime) / (1000 * 60 * 60);
+       }
+     }
+     return totalHours.toFixed(2);
+   };
+
+   const showClockInPicker = () => {
+     setClockInPickerVisibility(true);
+   };
+
+   const hideClockInPicker = () => {
+     setClockInPickerVisibility(false);
+   };
+
+   const handleClockInConfirm = (date) => {
+     setCustomClockIn(date);
+     hideClockInPicker();
+   };
+
+   const showClockOutPicker = () => {
+     setClockOutPickerVisibility(true);
+   };
+
+   const hideClockOutPicker = () => {
+     setClockOutPickerVisibility(false);
+   };
+
+   const handleClockOutConfirm = (date) => {
+     setCustomClockOut(date);
+     hideClockOutPicker();
+   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
