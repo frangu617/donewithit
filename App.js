@@ -15,7 +15,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 const App = () => {
-  const [location, setLocation] = useState("");
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showLoadingSpinner, setShowLoadingSpinner] = useState(true);
@@ -48,25 +47,60 @@ const App = () => {
     }
   };
 
+  const exportWorkLogs = async () => {
+    try {
+      const logs = await AsyncStorage.getItem("workLogs");
+      const parsedLogs = logs ? JSON.parse(logs) : [];
+      setLogs(parsedLogs);
+
+      let formattedLogs = "";
+      let lastDate = "";
+
+      parsedLogs.forEach((log, index) => {
+        const logDate = new Date(log.time).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+        const logTime = new Date(log.time).toLocaleString("en-US", {
+          hour: "numeric",
+          minute: "numeric",
+          hour12: true,
+        });
+
+        if (log.type === "Clock In" || logDate !== lastDate) {
+          formattedLogs += `${logDate}\n`;
+          lastDate = logDate;
+        }
+
+        formattedLogs += `${log.type}\ntime: ${logTime}\n\n`;
+      });
+
+      const blob = new Blob([formattedLogs], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `work_logs${new Date().toISOString()}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error exporting work logs:", error);
+    }
+  };
+
+
+
   const handleClockInOut = async () => {
     try {
-      if (logs.length % 2 === 0 && !location.trim()) {
-        Alert.alert("Error", "Please enter a location.");
-        return;
-      }
-
       const type = logs.length % 2 === 0 ? "Clock In" : "Clock Out";
       const time = new Date();
-      const newLocation =
-        type === "Clock Out" ? logs[logs.length - 1]?.location : location;
-      const newLog = { location: newLocation, type, time };
+      const newLog = { type, time };
 
       const updatedLogs = [...logs, newLog];
       await AsyncStorage.setItem("workLogs", JSON.stringify(updatedLogs));
       setLogs(updatedLogs);
-      if (type === "Clock In") {
-        setLocation("");
-      }
     } catch (error) {
       console.error("Error clocking in/out:", error);
     }
@@ -99,25 +133,20 @@ const App = () => {
 
   const handleAddCustomLog = async () => {
     try {
-      if (!location.trim()) {
-        Alert.alert("Error", "Please enter a location.");
-        return;
-      }
       if (customClockOut <= customClockIn) {
         Alert.alert("Error", "Clock-out time must be after clock-in time.");
         return;
       }
 
       const newLog = [
-        { location, type: "Clock In", time: customClockIn },
-        { location, type: "Clock Out", time: customClockOut },
+        { type: "Clock In", time: customClockIn },
+        { type: "Clock Out", time: customClockOut },
       ];
 
       const updatedLogs = [...logs, ...newLog];
       await AsyncStorage.setItem("workLogs", JSON.stringify(updatedLogs));
       setLogs(updatedLogs);
       setShowModal(false);
-      setLocation("");
     } catch (error) {
       console.error("Error adding custom log:", error);
     }
@@ -191,15 +220,6 @@ const App = () => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Work Hours Tracker</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter location"
-        value={location}
-        onChangeText={(text) => setLocation(text)}
-        editable={
-          logs.length === 0 || logs[logs.length - 1]?.type === "Clock Out"
-        }
-      />
       <Pressable
         style={({ pressed }) => [styles.button, pressed && { opacity: 0.5 }]}
         onPress={handleClockInOut}
@@ -255,7 +275,6 @@ const App = () => {
               return (
                 <View key={index} style={styles.logContainer}>
                   <View style={styles.logDetails}>
-                    <Text style={styles.logText}>{log.location}</Text>
                     <Text style={styles.logText}>{log.type}</Text>
                     <Text style={styles.logText}>{formattedTime}</Text>
                   </View>
@@ -278,19 +297,13 @@ const App = () => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add Custom Hours</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter location"
-              value={location}
-              onChangeText={(text) => setLocation(text)}
-            />
             <Text>Clock In Time:</Text>
             <Pressable onPress={showClockInPicker}>
               <Text style={styles.dateText}>
                 {customClockIn.toLocaleString()}
               </Text>
             </Pressable>
-            <Text>Clock Out Time:</Text>
+            <Text style={styles.clockOut}>Clock Out Time:</Text>
             <Pressable onPress={showClockOutPicker}>
               <Text style={styles.dateText}>
                 {customClockOut.toLocaleString()}
@@ -333,6 +346,12 @@ const App = () => {
           />
         </>
       )}
+      <Pressable
+        style={({ pressed }) => [styles.button, pressed && { opacity: 0.5 }]}
+        onPress={() => exportWorkLogs()}
+      >
+        <Text style={styles.buttonText}>Export Work Log</Text>
+      </Pressable>
     </ScrollView>
   );
 };
@@ -434,6 +453,16 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     elevation: 2,
+  },
+  clockIn: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  clockOut: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
   },
 });
 
